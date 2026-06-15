@@ -68,8 +68,10 @@ After upgrading the package, run `deeprefine cursor install` again to refresh lo
 
 ```bash
 /graphify .
-./graphify ./ --wiki
-/graphify query "your question"
+/graphify ./ --wiki
+/graphify query "your question 1"
+/graphify query "your question 2"
+# ..
 /deeprefine
 ```
 
