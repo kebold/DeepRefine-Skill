@@ -37,7 +37,8 @@ Supported agent frameworks:
 
 <p>
   <a href="https://cursor.com" title="Cursor"><img src="./assets/cursor_CUBE_25D.png" alt="Cursor" height="40"/></a>&nbsp;&nbsp;
-  <a href="https://github.com/google-gemini/gemini-cli" title="Gemini CLI"><img src="./assets/gemini-cli-icon_full-color@4x.png" alt="Gemini CLI" height="40"/></a>
+  <a href="https://github.com/google-gemini/gemini-cli" title="Gemini CLI"><img src="./assets/gemini-cli-icon_full-color@4x.png" alt="Gemini CLI" height="40"/></a>&nbsp;&nbsp;
+  <a href="https://docs.github.com/en/copilot" title="GitHub Copilot CLI"><strong>GitHub Copilot CLI</strong></a>
 </p>
 
 ---
@@ -62,6 +63,8 @@ graphify cursor install
 
 # for Cursor
 deeprefine cursor install
+# for Copilot CLI
+deeprefine copilot install
 # for Gemini CLI
 deeprefine gemini install # or deeprefine gemini link
 ```
@@ -120,8 +123,11 @@ Run from your KB project root.
 
 | Command | Description |
 |---------|-------------|
-| `deeprefine cursor install` | Install `/deeprefine` skill into current project |
-| `deeprefine cursor install --user` | Install skill for all projects (`~/.cursor/skills/`) |
+| `deeprefine cursor install` | Install `/deeprefine` skill for Cursor (`.cursor/skills/deeprefine/`) |
+| `deeprefine cursor install --user` | Install Cursor skill for all projects (`~/.cursor/skills/`) |
+| `deeprefine copilot install` | Install `/deeprefine` skill for Copilot CLI (`.github/skills/deeprefine/`) |
+| `deeprefine copilot install --user` | Install Copilot CLI skill for all projects (`~/.copilot/skills/`) |
+| `deeprefine copilot uninstall` | Remove Copilot CLI skill |
 | `deeprefine gemini path` | Print the extension root used for Gemini CLI |
 | `deeprefine gemini link` | Link the current source checkout with `gemini extensions link` |
 | `deeprefine gemini install` | Install the bundled extension with `gemini extensions install` |
@@ -154,6 +160,67 @@ GOOD: insert_edge("pretraining/pretraining_CLIP_fine-grained.py::main()", "calls
 ```
 
 `deeprefine apply` refuses LOW-confidence actions by default. Use `--allow-low-confidence` only when the user explicitly accepts the risk.
+
+---
+
+## Copilot CLI Integration
+
+<details>
+<summary><strong>Setup, commands, and session usage</strong></summary>
+
+DeepRefine works as a GitHub Copilot CLI agent skill.  The skill file is
+installed into `.github/skills/deeprefine/SKILL.md` and auto-discovered by
+Copilot.  Shell commands are pre-approved via `allowed-tools: shell`.
+
+### One-time setup
+
+```bash
+cd /path/to/your-kb-project
+pip install deeprefine-cli
+deeprefine copilot install --project
+```
+
+After upgrading the package, run `deeprefine copilot install --project` again
+to refresh the local skill file.  Start a Copilot CLI session and reload:
+
+```text
+/skills reload
+/skills info deeprefine
+```
+
+### Mode detection
+
+Copilot CLI does not natively support sub-commands, so the skill uses
+keyword-based mode detection in the SKILL.md preamble:
+
+| Mode | Trigger keywords | Behavior |
+|------|-----------------|----------|
+| **Full workflow** | `/deeprefine`, "refine", "improve", "fix" | Full Reafiner loop; stops after dry-run review; asks for approval |
+| **Review only** | "review", "check", "audit", "inspect", "dry-run" | Reads trace + refinement file; shows HIGH/MEDIUM/LOW report; no graph writes |
+| **Apply only** | "approve", "apply", "write", "go ahead" | Runs `deeprefine apply` only after a prior review; requires explicit user approval in the current message |
+
+### Copilot CLI session
+
+```text
+/deeprefine
+```
+
+The agent runs the full Reafiner loop for all pending queries.  For
+refinement-path queries, it stops after the dry-run review and asks:
+
+```text
+[HIGH] insert_edge("trainer.py::train_epoch()", "calls", "validate()")
+Evidence: Direct code evidence in trainer.py.
+[MEDIUM] insert_edge("data.py::load()", "imports", "torch")
+Warning: No direct code evidence found.
+
+Apply only after review. Approve?
+```
+
+Reply "apply" or "go ahead" to proceed; the agent will run
+`deeprefine apply` in the follow-up turn.
+
+</details>
 
 ---
 
@@ -305,7 +372,7 @@ deeprefine refine          # dry-run by default
 
 ```bash
 deeprefine --help
-# Expect: cursor, gemini, history, index, refine, review, apply, loop
+# Expect: cursor, copilot, gemini, history, index, refine, review, apply, loop
 ```
 </details>
 
