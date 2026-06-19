@@ -1,3 +1,12 @@
+"""Installers for agent-platform skill files (Cursor, Copilot CLI, Gemini CLI).
+
+Each platform has a source SKILL.md variant (SKILL.md for Cursor,
+SKILL_COPILOT.md for Copilot CLI, gemini_extension/ for Gemini CLI)
+bundled in the wheel or found at the repo root during editable installs.
+The install/remove functions copy the appropriate variant into the
+platform-specific directory.
+"""
+
 from __future__ import annotations
 
 import shutil
@@ -5,30 +14,44 @@ import subprocess
 from pathlib import Path
 
 _SKILL_MD_NAME = "SKILL.md"
+_SKILL_COPILOT_MD_NAME = "SKILL_COPILOT.md"
 _GEMINI_EXTENSION_NAME = "deeprefine-skill"
 
+# ---------------------------------------------------------------------------
+# Source-file resolution
+# ---------------------------------------------------------------------------
 
-def skill_md_path() -> Path:
-    """SKILL.md bundled in the wheel, or repo root when doing editable install."""
-    bundled = Path(__file__).resolve().parent / _SKILL_MD_NAME
+
+def _resolve_skill_source(filename: str) -> Path:
+    """Return *filename* from the package directory, or fall back to repo root."""
+    bundled = Path(__file__).resolve().parent / filename
     if bundled.is_file():
         return bundled
     repo_root = Path(__file__).resolve().parents[1]
-    fallback = repo_root / _SKILL_MD_NAME
+    fallback = repo_root / filename
     if fallback.is_file():
         return fallback
     raise FileNotFoundError(
-        f"Missing {_SKILL_MD_NAME} (expected next to deeprefine_skill/ or repo root)."
+        f"Missing {filename} (expected next to deeprefine_skill/ or repo root)."
     )
 
 
-def gemini_extension_path(*, prefer_repo: bool = True) -> Path:
-    """
-    Return a Gemini CLI extension root.
+def skill_md_path() -> Path:
+    """Return the path to the Cursor SKILL.md source."""
+    return _resolve_skill_source(_SKILL_MD_NAME)
 
-    In editable/source checkouts, the repository root is preferred because it can
-    be linked with `gemini extensions link .`. In wheels, use the bundled
-    template under deeprefine_skill/gemini_extension/.
+
+def skill_md_path_copilot() -> Path:
+    """Return the path to the Copilot CLI SKILL_COPILOT.md source."""
+    return _resolve_skill_source(_SKILL_COPILOT_MD_NAME)
+
+
+def gemini_extension_path(*, prefer_repo: bool = True) -> Path:
+    """Return a Gemini CLI extension root.
+
+    In editable/source checkouts, the repository root is preferred because
+    it can be linked with ``gemini extensions link .``.  In wheels, use the
+    bundled template under ``deeprefine_skill/gemini_extension/``.
     """
     repo_root = Path(__file__).resolve().parents[1]
     if prefer_repo and (repo_root / "gemini-extension.json").is_file():
@@ -45,12 +68,32 @@ def gemini_extension_path(*, prefer_repo: bool = True) -> Path:
 
 
 def _copy_tree_clean(src: Path, dest: Path) -> None:
+    """Recursively copy *src* to *dest*, removing *dest* first if it exists."""
     if dest.exists():
         shutil.rmtree(dest)
     shutil.copytree(src, dest)
 
 
+# ---------------------------------------------------------------------------
+# Cursor
+# ---------------------------------------------------------------------------
+
+
 def install_cursor_skill(*, project: bool) -> Path:
+    """Install the Cursor skill into ``.cursor/skills/deeprefine/``.
+
+    Parameters
+    ----------
+    project : bool
+        If *True*, install under the current working directory
+        (``.cursor/skills/deeprefine/``).  If *False*, install under
+        ``~/.cursor/skills/deeprefine/`` (user-wide).
+
+    Returns
+    -------
+    Path
+        Destination path of the installed ``SKILL.md``.
+    """
     src = skill_md_path()
     if project:
         dest_dir = Path.cwd() / ".cursor" / "skills" / "deeprefine"
@@ -62,6 +105,13 @@ def install_cursor_skill(*, project: bool) -> Path:
 
 
 def uninstall_cursor_skill(*, project: bool) -> bool:
+    """Remove a previously installed Cursor skill.
+
+    Returns
+    -------
+    bool
+        *True* if a file was removed, *False* if nothing was installed.
+    """
     if project:
         dest = Path.cwd() / ".cursor" / "skills" / "deeprefine" / _SKILL_MD_NAME
     else:
@@ -77,7 +127,66 @@ def uninstall_cursor_skill(*, project: bool) -> bool:
     return False
 
 
+# ---------------------------------------------------------------------------
+# Copilot CLI
+# ---------------------------------------------------------------------------
+
+
+def install_copilot_skill(*, project: bool) -> Path:
+    """Install the Copilot CLI skill into ``.github/skills/deeprefine/``.
+
+    Parameters
+    ----------
+    project : bool
+        If *True*, install under the current working directory
+        (``.github/skills/deeprefine/``).  If *False*, install under
+        ``~/.copilot/skills/deeprefine/`` (user-wide).
+
+    Returns
+    -------
+    Path
+        Destination path of the installed ``SKILL.md``.
+    """
+    src = skill_md_path_copilot()
+    if project:
+        dest_dir = Path.cwd() / ".github" / "skills" / "deeprefine"
+    else:
+        dest_dir = Path.home() / ".copilot" / "skills" / "deeprefine"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dest_dir / _SKILL_MD_NAME)
+    return dest_dir / _SKILL_MD_NAME
+
+
+def uninstall_copilot_skill(*, project: bool) -> bool:
+    """Remove a previously installed Copilot CLI skill.
+
+    Returns
+    -------
+    bool
+        *True* if a file was removed, *False* if nothing was installed.
+    """
+    if project:
+        dest = Path.cwd() / ".github" / "skills" / "deeprefine" / _SKILL_MD_NAME
+    else:
+        dest = Path.home() / ".copilot" / "skills" / "deeprefine" / _SKILL_MD_NAME
+    if dest.is_file():
+        dest.unlink()
+        for parent in [dest.parent, dest.parent.parent]:
+            try:
+                parent.rmdir()
+            except OSError:
+                pass
+        return True
+    return False
+
+
+# ---------------------------------------------------------------------------
+# Gemini CLI
+# ---------------------------------------------------------------------------
+
+
 def _gemini_executable() -> str:
+    """Return the path to the ``gemini`` CLI, or raise if not installed."""
     exe = shutil.which("gemini")
     if not exe:
         raise FileNotFoundError(
@@ -88,12 +197,13 @@ def _gemini_executable() -> str:
 
 
 def _run_gemini_extensions(args: list[str]) -> subprocess.CompletedProcess[str]:
+    """Run ``gemini extensions <args>`` and return the completed process."""
     exe = _gemini_executable()
     return subprocess.run([exe, "extensions", *args], text=True)
 
 
 def copy_gemini_extension(target_dir: Path | None = None) -> Path:
-    """Manual fallback: copy extension files under ~/.gemini/extensions."""
+    """Manual fallback: copy extension files under ``~/.gemini/extensions``."""
     src = gemini_extension_path(prefer_repo=False)
     if target_dir is None:
         dest = Path.home() / ".gemini" / "extensions" / _GEMINI_EXTENSION_NAME
@@ -105,6 +215,13 @@ def copy_gemini_extension(target_dir: Path | None = None) -> Path:
 
 
 def remove_copied_gemini_extension(target_dir: Path | None = None) -> bool:
+    """Remove a manually copied Gemini extension directory.
+
+    Returns
+    -------
+    bool
+        *True* if the directory was removed, *False* if it did not exist.
+    """
     if target_dir is None:
         dest = Path.home() / ".gemini" / "extensions" / _GEMINI_EXTENSION_NAME
     else:
@@ -116,18 +233,46 @@ def remove_copied_gemini_extension(target_dir: Path | None = None) -> bool:
 
 
 def link_gemini_extension(source: Path | None = None) -> Path:
-    """Use Gemini CLI's official manager to link an extension directory."""
+    """Use Gemini CLI's official manager to link an extension directory.
+
+    Parameters
+    ----------
+    source : Path or None
+        Extension root to link.  Defaults to the repo root when available.
+
+    Returns
+    -------
+    Path
+        The linked source directory.
+    """
     src = (source or gemini_extension_path(prefer_repo=True)).expanduser().resolve()
     if not (src / "gemini-extension.json").is_file():
         raise FileNotFoundError(f"Not a Gemini extension root: {src}")
     cp = _run_gemini_extensions(["link", str(src)])
     if cp.returncode != 0:
-        raise RuntimeError(f"`gemini extensions link {src}` failed with exit code {cp.returncode}")
+        raise RuntimeError(
+            f"`gemini extensions link {src}` failed with exit code {cp.returncode}"
+        )
     return src
 
 
-def install_gemini_extension(source: Path | None = None, *, consent: bool = True) -> Path:
-    """Use Gemini CLI's official manager to install a copied extension."""
+def install_gemini_extension(
+    source: Path | None = None, *, consent: bool = True
+) -> Path:
+    """Use Gemini CLI's official manager to install a copied extension.
+
+    Parameters
+    ----------
+    source : Path or None
+        Extension root to install.  Defaults to the bundled template.
+    consent : bool
+        If *True*, pass ``--consent`` to ``gemini extensions install``.
+
+    Returns
+    -------
+    Path
+        The installed source directory.
+    """
     src = (source or gemini_extension_path(prefer_repo=False)).expanduser().resolve()
     if not (src / "gemini-extension.json").is_file():
         raise FileNotFoundError(f"Not a Gemini extension root: {src}")
@@ -142,8 +287,16 @@ def install_gemini_extension(source: Path | None = None, *, consent: bool = True
     return src
 
 
-def uninstall_gemini_extension(*, copy_only: bool = False, target_dir: Path | None = None) -> bool:
-    """Uninstall through Gemini CLI manager, or remove manual copied files."""
+def uninstall_gemini_extension(
+    *, copy_only: bool = False, target_dir: Path | None = None
+) -> bool:
+    """Uninstall through Gemini CLI manager, or remove manual copied files.
+
+    Returns
+    -------
+    bool
+        *True* if the extension was removed, *False* otherwise.
+    """
     if copy_only:
         return remove_copied_gemini_extension(target_dir)
     cp = _run_gemini_extensions(["uninstall", _GEMINI_EXTENSION_NAME])

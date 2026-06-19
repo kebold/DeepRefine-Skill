@@ -6,3 +6,8 @@ dist/
 build/
 .pytest_cache/
 *.pkl
+.DS_Store
+
+# Personal working documents — kept locally, not distributed
+docs/tmp/
+CLAUDE.local.md

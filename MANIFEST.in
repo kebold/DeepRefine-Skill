@@ -1,6 +1,8 @@
 include README.md
 include LICENSE
 include SKILL.md
+include SKILL_COPILOT.md
+include deeprefine_skill/SKILL_COPILOT.md
 
 include gemini-extension.json
 include GEMINI.md
