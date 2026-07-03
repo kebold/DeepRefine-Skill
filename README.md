@@ -18,8 +18,8 @@
 </tr>
 </table>
 
-[![PyPi](https://img.shields.io/badge/PyPi-v0.1.8-blue.svg)](https://pypi.org/project/deeprefine-cli/0.1.8/)
-[![Python](https://img.shields.io/badge/Python-3.10,3.11,3.12-blue.svg)](https://pypi.org/project/deeprefine-cli/0.1.8/)
+[![PyPi](https://img.shields.io/badge/PyPi-v0.1.9-blue.svg)](https://pypi.org/project/deeprefine-cli/0.1.9/)
+[![Python](https://img.shields.io/badge/Python-3.10,3.11,3.12-blue.svg)](https://pypi.org/project/deeprefine-cli/0.1.9/)
 [![Paper](https://img.shields.io/badge/Paper-DeepRefine-b31b1b.svg)](https://arxiv.org/pdf/2605.10488)
 [![Project](https://img.shields.io/badge/Project-DeepRefine-green.svg)](https://github.com/HKUST-KnowComp/DeepRefine)
 
@@ -45,9 +45,10 @@ Supported agent frameworks:
 ---
 
 ## News
-- **[2026/6/24] unreleased** - Codex skill supported.
-- **[2026/6/18] unreleased** - Gemini CLI and Copilot CLI supported.
-- **[2026/6/17] unreleased** - Added dry-run-first refinement, evidence-aware action review, ambiguous-node warnings, and LOW-confidence apply guard.
+- **[2026/7/3] v0.1.9** -  Release with Codex, Copilot CLI, and Gemini CLI skills bundled; dry-run-first refinement, evidence-aware action review (HIGH/MEDIUM/LOW), ambiguous-node warnings, and LOW-confidence apply guard.
+- **[2026/6/24] v0.1.9** - Codex skill supported.
+- **[2026/6/18] v0.1.9** - Gemini CLI and Copilot CLI supported.
+- **[2026/6/17] v0.1.9** - Added dry-run-first refinement, evidence-aware action review, ambiguous-node warnings, and LOW-confidence apply guard.
 - **[2026/6/15] v0.1.8** - Aligned interaction memory with LLM-Wiki (graphify) and fixed the single query refinement issue.
 - **[2026/6/2] v0.1.7** — Cursor skill + `deeprefine refine` with configurable API. And strict DeepRefine agent loop.
 
@@ -425,7 +426,7 @@ deeprefine refine          # dry-run by default
 
 | Method | Command |
 |--------|---------|
-| **PyPI** | `pip install deeprefine-cli==0.1.8` |
+| **PyPI** | `pip install deeprefine-cli==0.1.9` |
 | **Source** | `pip install -e /path/to/DeepRefine-Skill` |
 
 ```bash
